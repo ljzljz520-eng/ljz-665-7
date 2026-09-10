@@ -1,0 +1,18 @@
+{
+  "name": "medical-cart-archive",
+  "version": "1.0.0",
+  "description": "医疗推车档案模块：推车档案维护、照片与历史操作、报废锁定、JWT 权限演示",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "seed": "node server/db.js --seed-only",
+    "reset": "rm -f data/carts.db && node server/db.js --seed-only"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.3.0",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1"
+  }
+}

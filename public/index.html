@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>医疗推车档案管理</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<!-- 登录页 -->
+<section id="loginView" class="login-wrap">
+  <form id="loginForm" class="login-card">
+    <div class="brand">🏥 <span>医疗推车档案管理</span></div>
+    <p class="sub">Medical Cart Archive</p>
+    <label>用户名
+      <input type="text" id="loginUser" autocomplete="username" placeholder="admin / nurse1 / viewer1" required>
+    </label>
+    <label>密码
+      <input type="password" id="loginPass" autocomplete="current-password" placeholder="admin123 / nurse123 / viewer123" required>
+    </label>
+    <button type="submit" class="btn primary block">登 录</button>
+    <div id="loginError" class="error"></div>
+    <div class="demo-hint">
+      <b>演示账号</b>
+      <span>admin/admin123（管理员，可报废/删除）</span>
+      <span>nurse1/nurse123（护士，可维护/消毒/状态）</span>
+      <span>viewer1/viewer123（巡查员，只读）</span>
+    </div>
+  </form>
+</section>
+
+<!-- 主界面 -->
+<section id="appView" hidden>
+  <header class="topbar">
+    <div class="brand sm">🏥 医疗推车档案管理</div>
+    <div class="top-right">
+      <span id="dbStatus" class="db-dot" title="数据库连接状态">检测中…</span>
+      <span class="user-chip">
+        <b id="userName"></b>
+        <em id="userRole" class="role-badge"></em>
+      </span>
+      <button id="btnLogout" class="btn ghost sm">退出</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="toolbar">
+      <input id="fKeyword" class="input" placeholder="搜索推车编号 / 责任护士">
+      <select id="fDept" class="input"><option value="">全部科室</option></select>
+      <select id="fStatus" class="input">
+        <option value="">全部状态</option>
+        <option value="in_use">使用中</option>
+        <option value="idle">闲置</option>
+        <option value="repair">维修中</option>
+        <option value="scrapped">已报废</option>
+      </select>
+      <button id="btnSearch" class="btn">查询</button>
+      <span class="spacer"></span>
+      <button id="btnCreate" class="btn primary">＋ 新建推车档案</button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="grid">
+        <thead>
+          <tr>
+            <th>推车编号</th><th>科室</th><th>责任护士</th><th>药箱配置</th>
+            <th>最近消毒</th><th>状态</th><th>更新时间</th><th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="cartTbody"></tbody>
+      </table>
+    </div>
+  </main>
+</section>
+
+<!-- 新建/编辑 弹窗 -->
+<div id="formModal" class="modal-mask" hidden>
+  <div class="modal">
+    <h3 id="formTitle">新建推车档案</h3>
+    <form id="cartForm">
+      <input type="hidden" id="cartId">
+      <div class="grid2">
+        <label>推车编号 <i>*</i><input id="fCartNo" required maxlength="30" placeholder="如 TC-010"></label>
+        <label>科室 <i>*</i><input id="fDepartment" required list="deptList" placeholder="如 急诊科"></label>
+        <datalist id="deptList"></datalist>
+        <label>责任护士 <i>*</i><input id="fNurse" required placeholder="如 张护士"></label>
+        <label>最近消毒时间<input id="fSterilized" type="datetime-local"></label>
+        <label id="statusField">初始状态
+          <select id="fStatusForm">
+            <option value="in_use">使用中</option>
+            <option value="idle">闲置</option>
+            <option value="repair">维修中</option>
+            <option value="scrapped">已报废(管理员)</option>
+          </select>
+        </label>
+      </div>
+      <label>药箱配置（每行一项）<i>*</i>
+        <textarea id="fKit" rows="4" required placeholder="急救药品箱A&#10;除颤仪配套箱&#10;气道管理箱"></textarea>
+      </label>
+      <label>备注<textarea id="fRemark" rows="2"></textarea></label>
+      <div id="scrapLockTip" class="lock-tip" hidden>🔒 该车已报废，档案整体锁定，不可编辑。</div>
+      <div class="modal-actions">
+        <button type="button" class="btn ghost" data-close>取消</button>
+        <button type="submit" class="btn primary">保存</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 详情弹窗 -->
+<div id="detailModal" class="modal-mask wide" hidden>
+  <div class="modal">
+    <div class="detail-head">
+      <h3 id="dTitle"></h3>
+      <div id="dBadges"></div>
+    </div>
+
+    <div class="detail-grid">
+      <div><span>推车编号</span><b id="dNo"></b></div>
+      <div><span>科室</span><b id="dDept"></b></div>
+      <div><span>责任护士</span><b id="dNurse"></b></div>
+      <div><span>最近消毒</span><b id="dSter"></b></div>
+      <div><span>建档时间</span><b id="dCreated"></b></div>
+      <div><span>更新时间</span><b id="dUpdated"></b></div>
+    </div>
+
+    <h4>🧰 药箱配置</h4>
+    <ul id="dKit" class="kit-list"></ul>
+    <p id="dRemark" class="remark"></p>
+
+    <div class="detail-actions" id="dActions">
+      <button class="btn" id="btnSterilize">🩺 消毒登记</button>
+      <button class="btn warn" id="btnRepair">转维修</button>
+      <button class="btn" id="btnIdle">转闲置</button>
+      <button class="btn ok" id="btnInUse">启用/使用中</button>
+      <button class="btn danger" id="btnScrap">⛔ 报废</button>
+      <span class="spacer"></span>
+      <button class="btn" id="btnEdit">✏️ 编辑档案</button>
+      <button class="btn danger ghost" id="btnDelete">删除</button>
+    </div>
+
+    <h4>📷 推车照片</h4>
+    <div class="photo-bar">
+      <input type="file" id="photoInput" accept="image/*" hidden>
+      <input type="text" id="photoCaption" class="input" placeholder="照片说明（可选）">
+      <button class="btn" id="btnUpload">上传照片</button>
+    </div>
+    <div id="photoGrid" class="photo-grid"></div>
+
+    <h4>🕘 历史操作（审计日志）</h4>
+    <div class="log-box" id="logBox"></div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn ghost" data-close>关闭</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="/js/app.js"></script>
+</body>
+</html>
